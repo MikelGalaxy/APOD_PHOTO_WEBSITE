@@ -16,6 +16,7 @@ namespace API_Conection_Layer
         string nasaMainAddress = "https://api.nasa.gov";
         string secondaryAddress = "planetary/apod";
         string key = "QnxHD3Wm7DAOLQGJTguW2xIfU171Vdp0kyMWXyaM";
+        string apodObjectFolderName = "apodObjects";
 
         private List<ApodPicture> pictureList;
 
@@ -30,7 +31,11 @@ namespace API_Conection_Layer
             for(int i=0;i<5;i++)
             {
                 var date = DateTime.Now.Date.AddDays(-i).ToString("yyyy-MM-dd");
-                ExecuteApodRequest(secondaryAddress, date, true);
+                if(!IsPicutreSaved(date))
+                {
+                    ExecuteApodRequest(secondaryAddress, date, true);
+                }
+               
             }
             SaveObjectListToFile(pictureList);
         }
@@ -76,22 +81,16 @@ namespace API_Conection_Layer
             }
 
             var appPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-            var folderPath = Path.Combine(appPath, "apodObjects");
+            var folderPath = Path.Combine(appPath, apodObjectFolderName);
 
             if(!Directory.Exists(folderPath))
             {
                 Directory.CreateDirectory(folderPath);
             }
-          
-            foreach (var picture in picCollection)
-            {
-                var imagePath = Path.Combine(folderPath, $"{picture.Date}.jpg");
-                WebClient client = new WebClient();
-                if (picture.HdUrl != null)
-                {
-                    await Task.Run(() => client.DownloadFileAsync(new Uri(picture.HdUrl), imagePath));
-                }
-            }
+
+            //saving picutres
+            await SavePicutures(picCollection, folderPath);
+
 
             string jsonFile = JsonConvert.SerializeObject(picCollection.ToArray());
             var jsonFilePath = Path.Combine(folderPath, "picturesList.txt");
@@ -100,24 +99,37 @@ namespace API_Conection_Layer
 
         }
 
-        //public async Task SaveImage(string url, string date)
-        //{
-        //    var appPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-        //    var folderPath = Path.Combine(appPath, "images");
-        //    var imagePath = Path.Combine(folderPath, $"{date}.jpg");
+        public async Task SavePicutures(List<ApodPicture> picCollection, string folderPath)
+        {
+            foreach (var picture in picCollection)
+            {
+                if(IsPicutreSaved(picture.Date)==false)
+                {
+                    var imagePath = Path.Combine(folderPath, $"{picture.Date}.jpg");
+                    WebClient client = new WebClient();
+                    if (picture.HdUrl != null)
+                    {
+                        await Task.Run(() => client.DownloadFileAsync(new Uri(picture.HdUrl), imagePath));
+                    }
 
-        //    if (File.Exists(imagePath))
-        //    {
-        //        return;
-        //    }
+                    picture.HdUrl = imagePath;
+                    picture.Url = imagePath;
+                }               
+            }
+        }
 
-        //    WebClient client = new WebClient();
-        //    if (url != null)
-        //    {
-        //        await Task.Run(() => client.DownloadFileAsync(new Uri(url), imagePath));
-        //    }
+        public bool IsPicutreSaved(string date)
+        {
+            var appPath = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
+            var folderPath = Path.Combine(appPath, apodObjectFolderName);
 
-        //}
+            if(Directory.Exists(folderPath))
+            {
+               return File.Exists(Path.Combine(folderPath, $"{date}.jpg"));
+            }                
+
+            return false;
+        }
 
         //public bool LoadImage(string date)
         //{
