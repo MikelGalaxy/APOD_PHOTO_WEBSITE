@@ -56,7 +56,7 @@ namespace NASA_API_PHOTOSHOTS
             {
                 routes.MapRoute(
                     name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                    template: "{controller=NasaPictures}/{action=Index}/{id?}");
             });
         }
     }
